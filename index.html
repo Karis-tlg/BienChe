@@ -43,7 +43,7 @@
         }
 
         .filter-container select, .filter-container input {
-            width: 100%;
+            width: calc(100% - 20px);
             padding: 10px;
             margin-bottom: 15px;
             background-color: #1e293b;
@@ -53,7 +53,7 @@
         }
 
         .filter-container button {
-            width: 100%;
+            width: calc(100% - 20px);
             padding: 10px;
             background-color: #4caf50;
             color: #ffffff;
@@ -183,7 +183,7 @@
                         <th data-sort="name">Họ và Tên</th>
                         <th data-sort="dob">Ngày Sinh</th>
                         <th data-sort="gender">Giới Tính</th>
-                        <th data-sort="class">Lớp</th>
+						<th data-sort="class">Lớp</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -195,6 +195,12 @@
             </div>
         </div>
     </div>
+	
+	<footer style="text-align: center; margin-top: 20px; padding: 10px; background-color: #242f3e; border-top: 1px solid #3e4b5e;">
+		<span style="font-size: 14px; color: #ffffff;">
+			&copy; 2024 <a href="https://www.facebook.com/td.kha.12/" style="color: #4caf50; text-decoration: none;">Kha Trần</a>. All rights reserved.
+		</span>
+	</footer>  
 
     <script>
         const yearFilter = document.getElementById('year-filter');
@@ -204,78 +210,137 @@
         const genderFilter = document.getElementById('gender-filter');
         const studentTable = document.getElementById('student-table').querySelector('tbody');
         const paginationContainer = document.getElementById('pagination-container');
+		const searchButton = document.getElementById('filter-button');
 
         let currentPage = 1;
         const rowsPerPage = 10;
+        let allStudents = [];
+	
+		let timeout;
 
+        searchBar.addEventListener('input', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                loadStudents();
+            }, 300);
+        });
+	
         const loadFilters = async () => {
-            try {
-                const response = await fetch('YEARS'); // Fetch the list of years and classes
-                const data = await response.json();
+            const years = ["2023", "2024"]; // Giả sử các năm học có sẵn
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
 
-                // Populate years in the year filter
-                Object.keys(data).forEach(year => {
+            yearFilter.addEventListener('change', updateClassFilter);
+            updateClassFilter();
+        };
+
+        const updateClassFilter = () => {
+            const selectedYear = yearFilter.value;
+            classFilter.innerHTML = '<option value="">Tất cả các lớp</option>'; // Reset lớp
+
+            if (selectedYear === "2023") {
+                const files = [
+                    { name: "LỚP 1", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/L%E1%BB%9AP%201.csv" },
+                    { name: "LỚP 2_1", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/L%E1%BB%9AP%202_1.csv" },
+                    { name: "LỚP 2_2", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/L%E1%BB%9AP%202_2.csv" }
+                ];
+
+                files.forEach(file => {
                     const option = document.createElement('option');
-                    option.value = year;
-                    option.textContent = year;
-                    yearFilter.appendChild(option);
+                    option.value = file.url;
+                    option.textContent = file.name;
+                    classFilter.appendChild(option);
                 });
-
-                // Update classes when year changes
-                yearFilter.addEventListener('change', () => {
-                    classFilter.innerHTML = '<option value="">Tất cả các lớp</option>'; // Reset classes
-                    const selectedYear = yearFilter.value;
-
-                    if (data[selectedYear]) {
-                        data[selectedYear].forEach(classFile => {
-                            const option = document.createElement('option');
-                            option.value = classFile;
-                            option.textContent = classFile.replace('.csv', '');
-                            classFilter.appendChild(option);
-                        });
-                    }
-                });
-            } catch (error) {
-                console.error('Error loading filters:', error);
             }
+            loadStudents();
         };
 
         const loadStudents = async () => {
-            const year = yearFilter.value;
-            const className = classFilter.value;
+            const classUrl = classFilter.value;
+            const searchTerm = searchBar.value.toLowerCase();
+            let filteredStudents = [];
 
-            if (!year) {
-                alert('Vui lòng chọn năm học.');
-                return;
+            if (!classUrl && classFilter.options.length > 1) {
+                const options = Array.from(classFilter.options).filter(opt => opt.value);
+
+                for (let opt of options) {
+                    try {
+                        const response = await fetch(opt.value);
+                        if (!response.ok) {
+                            throw new Error(`Không thể tải file: ${opt.value}`);
+                        }
+
+                        const csvData = await response.text();
+                        const rows = csvData.split('\n').filter(Boolean);
+                        const students = rows.slice(1).map(row => {
+                            const [TT, HoVaTen, GT, NgaySinh] = row.split(',');
+                            return { TT, HoVaTen, GT, NgaySinh, Lop: opt.textContent };
+                        });
+                        filteredStudents = filteredStudents.concat(students);
+                    } catch (error) {
+                        console.error('Lỗi khi tải dữ liệu:', error);
+                    }
+                }
+            } else {
+                try {
+                    const response = await fetch(classUrl);
+                    if (!response.ok) {
+                        throw new Error(`Không thể tải file: ${classUrl}`);
+                    }
+
+                    const csvData = await response.text();
+                    const rows = csvData.split('\n').filter(Boolean);
+                    filteredStudents = rows.slice(1).map(row => {
+                        const [TT, HoVaTen, GT, NgaySinh] = row.split(',');
+                        return { TT, HoVaTen, GT, NgaySinh, Lop: classFilter.options[classFilter.selectedIndex].text };
+                    });
+                } catch (error) {
+                    console.error('Lỗi khi tải dữ liệu:', error);
+                }
             }
 
-            const filePath = className ? `YEARS/${year}/${className}` : `YEARS/${year}/all.csv`;
+            if (searchTerm) {
+                filteredStudents = filteredStudents.filter(student =>
+                    student.HoVaTen.toLowerCase().includes(searchTerm) ||
+                    student.NgaySinh.includes(searchBar.value)
+                );
+            }
 
-            try {
-                const response = await fetch(filePath);
-                const csvData = await response.text();
-                const rows = csvData.split('\n');
-                const data = rows.slice(1).map(row => {
-                    const [name, dob, gender, className] = row.split(',');
-                    return { name, dob, gender, className };
+            if (genderFilter.value) {
+                filteredStudents = filteredStudents.filter(student =>
+                    student.GT === genderFilter.value
+                );
+            }
+
+            if (dobSort.value) {
+                filteredStudents.sort((a, b) => {
+                    const dateA = new Date(a.NgaySinh.split('-').reverse().join('-'));
+                    const dateB = new Date(b.NgaySinh.split('-').reverse().join('-'));
+                    return dobSort.value === 'asc' ? dateA - dateB : dateB - dateA;
                 });
-
-                renderTable(data);
-            } catch (error) {
-                console.error('Lỗi khi tải dữ liệu:', error);
             }
+
+            renderTable(filteredStudents);
         };
 
         const renderTable = (data) => {
+            if (data.length === 0) {
+                studentTable.innerHTML = '<tr><td colspan="3">Không tìm thấy dữ liệu</td></tr>';
+                return;
+            }
             const paginatedData = paginateData(data, currentPage, rowsPerPage);
             studentTable.innerHTML = '';
             paginatedData.forEach(student => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${student.name}</td>
-                    <td>${student.dob}</td>
-                    <td>${student.gender}</td>
-                    <td>${student.className}</td>
+                    <td>${student.HoVaTen}</td>
+                    <td>${student.NgaySinh}</td>
+                    <td>${student.GT}</td>
+					<td>${student.Lop}</td>
                 `;
                 studentTable.appendChild(row);
             });
@@ -303,10 +368,19 @@
             }
         };
 
-        document.getElementById('filter-button').addEventListener('click', () => {
-            currentPage = 1;
-            loadStudents();
+        searchBar.addEventListener('input', () => {
+            const searchTerm = searchBar.value.toLowerCase();
+            const suggestions = allStudents
+                .map(student => `${student.HoVaTen} - ${student.NgaySinh}`)
+                .filter(name => name.toLowerCase().includes(searchTerm));
+
+            console.log('Suggestions:', suggestions); // Hiển thị gợi ý trong console hoặc triển khai UI.
         });
+
+        yearFilter.addEventListener('change', loadStudents);
+        classFilter.addEventListener('change', loadStudents);
+        dobSort.addEventListener('change', loadStudents);
+        genderFilter.addEventListener('change', loadStudents);
 
         loadFilters();
     </script>
