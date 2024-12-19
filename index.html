@@ -93,30 +93,39 @@
             background-color: #1f2a37;
         }
 
-        .pagination {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
-        }
+		.pagination {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			margin-top: 20px;
+			gap: 5px;
+			flex-wrap: wrap; 
+		}
 
-        .pagination button {
-            padding: 8px 16px;
-            margin: 0 5px;
-            background-color: #4caf50;
-            color: #ffffff;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+		.pagination button {
+			padding: 8px 16px;
+			background-color: #4caf50;
+			color: #ffffff;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			min-width: 40px; 
+			text-align: center;
+		}
 
-        .pagination button:hover {
-            background-color: #45a049;
-        }
+		.pagination button:hover {
+			background-color: #45a049;
+		}
 
-        .pagination button:disabled {
-            background-color: #3e4b5e;
-            cursor: not-allowed;
-        }
+		.pagination button:disabled {
+			background-color: #3e4b5e;
+			display: none;
+		}
+
+		.pagination .current {
+			background-color: #242f3e;
+			font-weight: bold;
+		}
 
         @media (max-width: 600px) {
             .filter-container {
@@ -148,7 +157,6 @@
             <label>
                 Năm học:
                 <select id="year-filter">
-                    <!-- Options sẽ được thêm động bằng JavaScript -->
                 </select>
             </label>
             <label>
@@ -187,11 +195,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Dữ liệu sẽ được thêm động bằng JavaScript -->
                 </tbody>
             </table>
             <div class="pagination" id="pagination-container">
-                <!-- Nút phân trang sẽ được thêm động -->
             </div>
         </div>
     </div>
@@ -226,7 +232,7 @@
         });
 	
         const loadFilters = async () => {
-            const years = ["2023", "2024"]; // Giả sử các năm học có sẵn
+            const years = ["2023"]; 
             years.forEach(year => {
                 const option = document.createElement('option');
                 option.value = year;
@@ -244,10 +250,16 @@
 
             if (selectedYear === "2023") {
                 const files = [
-                    { name: "LỚP 1", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/L%E1%BB%9AP%201.csv" },
-                    { name: "LỚP 2_1", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/L%E1%BB%9AP%202_1.csv" },
-                    { name: "LỚP 2_2", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/L%E1%BB%9AP%202_2.csv" }
-                ];
+					{ name: "10A1", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A1.csv" },
+					{ name: "10A2", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A2.csv" },
+					{ name: "10A3", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A3.csv" },
+					{ name: "10A4", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A4.csv" },
+					{ name: "10A5", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A5.csv" },
+					{ name: "10A6", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A6.csv" },
+					{ name: "10A7", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A7.csv" },
+					{ name: "10A8", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A8.csv" },
+					{ name: "10A9", url: "https://raw.githubusercontent.com/Karis-tlg/BienChe/main/Years/2023/10A9.csv" }
+				];
 
                 files.forEach(file => {
                     const option = document.createElement('option');
@@ -353,20 +365,47 @@
             return data.slice(start, end);
         };
 
-        const renderPagination = (totalRows) => {
-            paginationContainer.innerHTML = '';
-            const totalPages = Math.ceil(totalRows / rowsPerPage);
-            for (let i = 1; i <= totalPages; i++) {
-                const button = document.createElement('button');
-                button.textContent = i;
-                button.disabled = i === currentPage;
-                button.addEventListener('click', () => {
-                    currentPage = i;
-                    loadStudents();
-                });
-                paginationContainer.appendChild(button);
-            }
-        };
+		const renderPagination = (totalRows) => {
+			paginationContainer.innerHTML = '';
+			const totalPages = Math.ceil(totalRows / rowsPerPage);
+			const maxVisiblePages = 5; 
+
+			if (totalPages <= 1) return; 
+
+			const createButton = (text, disabled = false, page = null) => {
+				const button = document.createElement('button');
+				button.textContent = text;
+				button.disabled = disabled;
+				if (page !== null) {
+					button.addEventListener('click', () => {
+						currentPage = page;
+						loadStudents();
+					});
+				}
+				if (page === currentPage) button.classList.add('current');
+				return button;
+			};
+			paginationContainer.appendChild(createButton('Đầu', currentPage === 1, 1));
+			paginationContainer.appendChild(createButton('«', currentPage === 1, currentPage - 1));
+
+			let startPage = Math.max(currentPage - Math.floor(maxVisiblePages / 2), 1);
+			let endPage = Math.min(startPage + maxVisiblePages - 1, totalPages);
+			if (endPage - startPage + 1 < maxVisiblePages) {
+				startPage = Math.max(endPage - maxVisiblePages + 1, 1);
+			}
+
+			if (startPage > 1) {
+				paginationContainer.appendChild(createButton('...', true));
+			}
+			for (let i = startPage; i <= endPage; i++) {
+				paginationContainer.appendChild(createButton(i, false, i));
+			}
+			if (endPage < totalPages) {
+				paginationContainer.appendChild(createButton('...', true));
+			}
+			paginationContainer.appendChild(createButton('»', currentPage === totalPages, currentPage + 1));
+			paginationContainer.appendChild(createButton('Cuối', currentPage === totalPages, totalPages));
+		};
 
         searchBar.addEventListener('input', () => {
             const searchTerm = searchBar.value.toLowerCase();
