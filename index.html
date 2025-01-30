@@ -232,7 +232,7 @@
         });
 	
         const loadFilters = async () => {
-            const years = ["2023"]; 
+            const years = ["2023", "2022"]; 
             years.forEach(year => {
                 const option = document.createElement('option');
                 option.value = year;
@@ -246,7 +246,7 @@
 
         const updateClassFilter = () => {
             const selectedYear = yearFilter.value;
-            classFilter.innerHTML = '<option value="">Tất cả các lớp</option>'; // Reset lớp
+            classFilter.innerHTML = '<option value="">Tất cả các lớp</option>'; 
 
             if (selectedYear === "2023") {
                 const files = [
